@@ -92,11 +92,11 @@ getIsoTemp <- function(x, depths, iso_val){
 
 # Función principal de cálculo de volumen de isoterma ---------------------
 
-getVoliso <- function(x, iso_val, polygon_pars){
+getVoliso <- function(x, iso_val = 15, polygon = NULL, polygon_pars = NULL){
   
-  sprintf(fmt = "Obtener campos de isoterma de %.1f°C", iso_val) |> 
+  sprintf(fmt = "Isoterma de %.1f°C | Archivo %s", iso_val, basename(x)) |> 
     
-    cli::cli_progress_step()
+    cli::cli_h2()
   
   # Obtener volúmenes de isoterma a partir de un archivo NetCDF
   envir <- rast(x = x, subds = "thetao")
@@ -130,10 +130,34 @@ getVoliso <- function(x, iso_val, polygon_pars){
   # Definir valores de fecha
   time(isothermals) <- names(isothermals) <- depthsNtime$time
   
-  # Construir polígono
-  polygonVect <- corners2polygon(coords = polygon_pars, outClass = "terra")  
   
-  cli::cli_progress_step(msg = "Calcular volumen de isoterma")
+  # Construir polígono
+  if(is.null(polygon)){
+    if(is.null(polygon_pars)){
+      stop("Debe definir el argumento para `polygon` o `polygon_pars`.")
+    }else{
+      polygonVect <- corners2polygon(coords = polygon_pars, outClass = "terra")
+    }
+  }else{
+    polyClass <- c("SpatVector", "sf", "SpatialPolygons")
+    index <- sapply(X = polyClass, FUN = inherits, x = polygon) |> any()
+    
+    if(!index){
+      
+      sprintf(fmt = "`%s`", polyClass) |> 
+        
+        paste(collapse = ", ") |> 
+        
+        sprintf(fmt = "`polygon` debe ser un objeto de clase %s.")|> 
+        
+        stop()
+    }
+    
+    polygonVect <- vect(x = polygon)
+  }
+    
+  
+  cli::cli_progress_step(msg = "Calcular volumen de isoterma\n")
   
   # Multiplicar cada valor de profundidad de isoterma por el tamaño de cada 
   # grilla (en km^2)

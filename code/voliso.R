@@ -23,40 +23,43 @@ source("code/auxiliarFUN.R")
 allFiles <- list.files(path = envirDir, pattern = "\\.nc$", full.names = TRUE)
 
 
-# Obtener volúmenes de isoterma
 
-# Archivo 1
+
+# Obtener volumen (archivo único) -----------------------------------------
+
+# Archivo 1, polígono cuadrado
 getVoliso(x = allFiles[1], iso_val = isoVal, polygon_pars = polygonPars)
 
-# Archivo 2
-getVoliso(x = allFiles[2], iso_val = isoVal, polygon_pars = polygonPars)
+# Archivo 2, polígono EEZ Perú
+getVoliso(
+  x = allFiles[1], 
+  iso_val = isoVal, 
+  polygon = sf::st_read(dsn = "data/PER_eez.gpkg", layer = "eez")
+)
 
-# Todos los archivos
+
+# Obtener volumen (Todos los archivos) ------------------------------------
+
 require(dplyr)
 require(ggplot2)
 
-setNames(object = allFiles, nm = basename(allFiles)) |> 
-  
-  lapply(
-    FUN = getVoliso,
-    iso_val = isoVal, 
-    polygon_pars = polygonPars
-  ) |> 
-  
-  bind_rows(.id = "file") |> 
-  
-  ggplot() +
-  
-  geom_path(
-    mapping = aes(
-      x = time,
-      y = voliso_km3
-    )
-  ) +
-  
-  facet_wrap(~file, scales = "free_x") +
-  
-  theme_bw()
+# Definir valores de isoterma
+isos <- c(iso15 = 15, iso20 = 20)
 
-  
+# Calcular volúmenes 
+lapply(
+  X = isos,
+  FUN = \(x){
+    setNames(object = allFiles, nm = basename(allFiles)) |> 
+      
+      lapply(
+        FUN = getVoliso,
+        iso_val = x, 
+        polygon_pars = polygonPars
+      ) |> 
+      
+      bind_rows(.id = "file")
+  }
+)
+
   
